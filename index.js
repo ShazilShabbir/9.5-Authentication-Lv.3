@@ -57,12 +57,44 @@ app.get("/logout", (req, res) => {
   });
 });
 
-app.get("/secrets", (req, res) => {
+app.get("/secrets", async (req, res) => {
   console.log(req.user);
   if (req.isAuthenticated()) {
-    res.render("secrets.ejs");
+   try {
+    const result = await db.query("SELECT secret FROM users WHERE email = $1",[req.user.email]) 
+  const secret = result.rows[0].secret
+  if (secret) {
+    res.render("secrets.ejs",{secret:secret})
+  }else{
+    res.render("secrets.ejs",{secret:"You should submit a secret!"})
+  }
+   } catch (error) {
+    console.log(error);
+   }
   } else {
     res.redirect("/login");
+  }
+});
+
+app.get("/submit", (req, res) => {
+  if (req.isAuthenticated()) {
+    res.render("submit.ejs");
+  } else {
+    res.redirect("/login");
+  }
+});
+
+app.post("/submit", async (req, res) => {
+  const secret = req.body.secret;
+  console.log(req.user);
+  try {
+    await db.query("UPDATE users SET secret = $1 where email = $2 ", [
+      secret,
+      req.user.email,
+    ]);
+    res.redirect("/secrets")
+  } catch (err) {
+console.log(err);
   }
 });
 
